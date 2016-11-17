@@ -114,33 +114,130 @@ namespace FileSystem
     /*点数記録用*/
     public class SaveLoadManager : FileManager
     {
+        enum USER { ID, SCORE};
+
         public SaveLoadManager(string name)
         {
             base.filepath = Application.persistentDataPath + "/save";
             base.filename = filepath + "/" + name;
-            write();
+            InitialzeFile();
         }
-        void read()
+
+        /*IDからScoreを得る*/
+        public int GetScoreByID(string id)
         {
             string line;
-            StreamReader theReader = new StreamReader(filename, System.Text.Encoding.Default);
-            using (theReader)
+            int score = -1;
+
+            using (StreamReader theReader = new StreamReader(filename))
             {
                 do
                 {
                     line = theReader.ReadLine();
-                    Debug.Log(line);
-                } while (line != null);
+
+                    //特定値獲得
+                    if (line == '#' + id)
+                    {
+                        score = int.Parse(theReader.ReadLine());
+                        break;
+                    }
+                } while (theReader.Peek() >= 0);
             }
+
+            //エラー
+            if (score == -1)
+                Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
+
+            return score;
         }
 
-        void write()
+        /*IDから点数を設定する*/
+        public void SetScoreBYID(string id, int score)
+        {
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+            for(int i = 0; i < lines.Length; ++i)
+            {
+                if(lines[i] == '#' + id)
+                {
+                    lines[i + (int)USER.SCORE] = score.ToString();
+                    Debug.Log("点数設定成功");
+                    break;
+                }
+            }
+
+            System.IO.File.WriteAllLines(filename, lines);
+        }
+
+        /*登録済みのユーザーならtrueを返す*/
+        public bool isExistUser(string ID)
+        {
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+            foreach(var line in lines)
+            {
+                if(line == '#' + ID)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /*新ユーザー登録*/
+        public bool AddUser(string ID, int score = 0)
+        {
+            if (isExistUser(ID))
+            {
+                Debug.Log("既に存在するID");
+                return false;
+            }
+
+            using (StreamWriter sw = new StreamWriter(filename, true))
+            {
+                sw.WriteLine('#'+ID); // add id line
+                sw.WriteLine(score); // add score line
+            }
+            return true;
+        }
+
+        /*ユーザーを削除する*/
+        public void DeleteUser(string ID)
+        {
+            var lines = new List<string>(System.IO.File.ReadAllLines(filename));
+            int deleteLine = -1;
+
+            for (int i = 0; i < lines.Count; ++i)
+            {
+                if(lines[i] == '#' + ID)
+                {
+                    deleteLine = i;
+                }
+            }
+
+            //削除処理
+            lines.RemoveAt(deleteLine); //ID
+            lines.RemoveAt(deleteLine); //score
+
+            File.WriteAllLines(filename, lines.ToArray());
+        }
+
+        /*ファイルの存在有無を検査後生成*/
+        void InitialzeFile()
         {
             //ディレクトリ生成
             if (!Directory.Exists(filepath))
+            {
                 Directory.CreateDirectory(filepath);
+            }
+
             //ファイル生成
-            var file = File.Create(filename);
+            if (!File.Exists(filename))
+            {
+                var file = File.Create(filename);
+                file.Close();
+            }
         }
     }
 }

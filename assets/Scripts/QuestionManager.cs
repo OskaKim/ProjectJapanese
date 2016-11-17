@@ -100,9 +100,17 @@ namespace Question
 
             var currentCorrect = curQues.corAns.ToString();
 
+            bool isCorrect = false;
+            if(selectedAns == currentCorrect){
+                isCorrect = true;
+            }
+
             string display =
-                selectedAns == currentCorrect ?
+                isCorrect ?
                 "正解" : "×";
+
+            /*点数記録*/
+            if (isCorrect) CurrentlyLoginInfo.SCORE++;
 
             /*現在の問題は終了*/
             bCheckAnswer = false;

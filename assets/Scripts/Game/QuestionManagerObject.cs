@@ -17,6 +17,8 @@ public class QuestionManagerObject : MonoBehaviour
 
     void Start()
     {
+        //点数初期化
+        CurrentlyLoginInfo.SCORE = 0;
         //テスト用
         FileSystem.SaveLoadManager save = new FileSystem.SaveLoadManager("save.txt");
 
