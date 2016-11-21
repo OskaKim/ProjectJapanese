@@ -119,6 +119,9 @@ namespace Question
             /*点数記録*/
             if (isCorrect) CurrentlyLoginInfo.SCORE++;
 
+            /*点数記録*/
+            if (isCorrect) CurrentlyLoginInfo.SCORE++;
+
             /*現在の問題は終了*/
             bCheckAnswer = false;
             currentCorrect = null;

@@ -10,7 +10,7 @@ public class CurrentlyLoginInfo : MonoBehaviour {
     {
         get { return m_id; }
     }
-
+    
     public static int SCORE = 0;
     public static int HIGHSCORE = 0;
     public static int LEVEL = 1;

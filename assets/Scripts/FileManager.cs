@@ -139,7 +139,6 @@ namespace FileSystem
                     {
                         for (int i = 0; i < (int)USER.SCORE - 1; ++i)
                             theReader.ReadLine();
-
                         score = int.Parse(theReader.ReadLine());
                         break;
                     }
@@ -173,7 +172,7 @@ namespace FileSystem
 
             System.IO.File.WriteAllLines(filename, lines);
         }
-
+        
         /*IDからレートを取得*/
         public int GetRateByID(string id = "default")
         {
