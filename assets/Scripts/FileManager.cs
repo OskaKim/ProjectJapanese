@@ -80,7 +80,7 @@ namespace FileSystem
                         temp.ans = new List<string>();
 
                         //次の行に該当する要素を当てる
-                        temp.type = int.Parse(allLines[i + ++cnt]);
+                        temp.type = int.Parse(allLines[i + ++cnt].TrimStart('T'));
                         temp.ques = allLines[i + ++cnt];
 
                         //答えの数は可変的。Aが出るまで答えとして読み続ける
@@ -89,11 +89,8 @@ namespace FileSystem
                             temp.ans.Add(allLines[i + ++cnt]);
                         }
 
-                        //Aのズレ合わせ
-                        ++cnt;
-
                         //正解
-                        temp.corAns = int.Parse(allLines[i + (++cnt)]);
+                        temp.corAns = int.Parse(allLines[i + (++cnt)].TrimStart('A'));
 
                         //リストに格納
                         question.Add(temp);
@@ -114,33 +111,206 @@ namespace FileSystem
     /*点数記録用*/
     public class SaveLoadManager : FileManager
     {
-        public SaveLoadManager(string name)
+        const int MAXLEVEL = 6;
+        enum USER { ID, SCORE, RATE, MAX};
+
+        public SaveLoadManager(string name = "save.txt")
         {
             base.filepath = Application.persistentDataPath + "/save";
             base.filename = filepath + "/" + name;
-            write();
+            Debug.Log(filename);
+            InitialzeFile();
         }
-        void read()
+
+        /*IDからScoreを得る*/
+        public int GetScoreByID(string id = "default")
         {
             string line;
-            StreamReader theReader = new StreamReader(filename, System.Text.Encoding.Default);
-            using (theReader)
+            int score = -1;
+
+            using (StreamReader theReader = new StreamReader(filename))
             {
                 do
                 {
                     line = theReader.ReadLine();
-                    Debug.Log(line);
-                } while (line != null);
+
+                    //特定値獲得
+                    if (line == '#' + id)
+                    {
+                        for (int i = 0; i < (int)USER.SCORE - 1; ++i)
+                            theReader.ReadLine();
+
+                        score = int.Parse(theReader.ReadLine());
+                        break;
+                    }
+                } while (theReader.Peek() >= 0);
             }
+
+            //エラー
+            if (score == -1)
+            {
+                AddUser();
+                return 0;
+                //Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
+            }
+            return score;
         }
 
-        void write()
+        /*IDから点数を設定する*/
+        public void SetScoreByID(int score, string id = "default")
+        {
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+            for(int i = 0; i < lines.Length; ++i)
+            {
+                if(lines[i] == '#' + id)
+                {
+                    lines[i + (int)USER.SCORE] = score.ToString();
+                    Debug.Log("点数設定成功");
+                    break;
+                }
+            }
+
+            System.IO.File.WriteAllLines(filename, lines);
+        }
+
+        /*IDからレートを取得*/
+        public int GetRateByID(string id = "default")
+        {
+            string line;
+            int rate = -1;
+
+            using (StreamReader theReader = new StreamReader(filename))
+            {
+                do
+                {
+                    line = theReader.ReadLine();
+
+                    //特定値獲得
+                    if (line == '#' + id)
+                    {
+                        for (int i = 0; i < (int)USER.RATE - 1; ++i)
+                            theReader.ReadLine();
+
+                        rate = int.Parse(theReader.ReadLine()); //rate
+                        break;
+                    }
+                } while (theReader.Peek() >= 0);
+            }
+
+            //エラー
+            if (rate == -1)
+                Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
+
+            return rate;
+        }
+
+        /*点数からレートを設定*/
+        public void UpdateRateFromScore(int needScore, string curId = "default")
+        {
+            //レート上げには不十分
+            if (GetScoreByID(curId) < needScore)
+                return;
+            //挑戦できる最大のレートでないならレート上げはできない
+            //if (GetRateByID(curId) != CurrentlyLoginInfo.LEVEL)
+            //    return;
+
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+            for (int i = 0; i < lines.Length; ++i)
+            {
+                if (lines[i] == '#' + curId)
+                {
+                    int curRate = int.Parse(lines[i + (int)USER.RATE]);
+
+                    //システム的に制限値外ではないかチェック
+                    if(curRate >= 1 && curRate < MAXLEVEL)
+                    {
+                        //レート上げ
+                        ++curRate;
+                        lines[i + (int)USER.RATE] = curRate.ToString();
+                    }
+
+                    Debug.Log("レート更新成功");
+                    break;
+                }
+            }
+
+            System.IO.File.WriteAllLines(filename, lines);
+        }
+
+        /*登録済みのユーザーならtrueを返す*/
+        public bool isExistUser(string ID = "default")
+        {
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+            foreach(var line in lines)
+            {
+                if(line == '#' + ID)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /*新ユーザー登録*/
+        public bool AddUser(string id = "default", int score = 0, int rate = 1)
+        {
+            if (isExistUser(id))
+            {
+                Debug.Log("既に存在するID");
+                return false;
+            }
+
+            using (StreamWriter sw = new StreamWriter(filename, true))
+            {
+                sw.WriteLine('#'+id); // add id line
+                sw.WriteLine(score); // add score line
+                sw.WriteLine(rate); // add rate line
+            }
+            return true;
+        }
+
+        /*ユーザーを削除する*/
+        public void DeleteUser(string ID = "default")
+        {
+            var lines = new List<string>(System.IO.File.ReadAllLines(filename));
+            int deleteLine = -1; // -1から変化なしだったらエラー
+
+            for (int i = 0; i < lines.Count; ++i)
+            {
+                if(lines[i] == '#' + ID)
+                {
+                    deleteLine = i;
+                }
+            }
+
+            //削除処理
+            for(int i = 0; i < (int)USER.MAX; ++i)
+            {
+                lines.RemoveAt(deleteLine);
+            }
+
+            File.WriteAllLines(filename, lines.ToArray());
+        }
+
+        /*ファイルの存在有無を検査後生成*/
+        void InitialzeFile()
         {
             //ディレクトリ生成
             if (!Directory.Exists(filepath))
+            {
                 Directory.CreateDirectory(filepath);
+            }
+
             //ファイル生成
-            var file = File.Create(filename);
+            if (!File.Exists(filename))
+            {
+                var file = File.Create(filename);
+                file.Close();
+            }
         }
     }
 }

@@ -6,6 +6,8 @@ public class AnswerButton : MonoBehaviour {
     //答えを現在のボタンに設定する
     public void SetAnswer()
     {
+        Question.QuestionManager.bCheckAnswer = true;
+
         //現在選択した答え
         char curAns = gameObject.name[0];
 

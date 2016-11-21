@@ -14,7 +14,7 @@ public class Buttons : MonoBehaviour {
     }
     public void LoadScene_Lesson1()
     {
-        SceneManager.LoadScene("Sample");
+        SceneManager.LoadScene("Game");
     }
     public void LoadScene_ScoreScene()
     {

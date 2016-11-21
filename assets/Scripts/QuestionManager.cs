@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 
 /*問題に関する機能がまとめされている*/
@@ -18,6 +19,11 @@ namespace Question
     //インスタンスを生成し、初期化してから使う
     public class QuestionManager : ScriptableObject
     {
+        //現在の問題番号
+        int curQuesNum = 0;
+        //次の問題表示までのタイマー
+        const float TICK_O = 1.0f, TICK_X = 1.5f;
+
         /*問題のリスト*/
         List<QuesStructor> questions;
         QuesStructor curQues;
@@ -38,7 +44,7 @@ namespace Question
         /*新 初期化*/ //warning対策のため
         public static void Create(ref QuestionManager Inst, Text quesTextObj, Button ansPrefab, Text answerTextObj, string fileName = "Lesson1")
         {
-            Inst = ScriptableObject.CreateInstance<Question.QuestionManager>();
+            Inst = CreateInstance<QuestionManager>();
 
             //初期化
             Inst.questions = new List<QuesStructor>();
@@ -70,9 +76,9 @@ namespace Question
         //    CurAnswers = new List<Button>();
         //}
         
-        public void Update()
+        public void UpdateQuestion(ref float timer)
         {
-            CheckAnswerPhase();
+            CheckAnswerPhase(ref timer);
             AnswerText.text = GetAnswerDisplay();
         }
 
@@ -87,22 +93,31 @@ namespace Question
             {
                 displayAns += curQues.ans[(int)char.GetNumericValue(ans) - 1];
             }
-            Debug.Log(displayAns);
             
             return displayAns;
         }
 
         /*答えチェック段階*/
-        void CheckAnswerPhase()
+        void CheckAnswerPhase(ref float timer)
         {
-            if (!bCheckAnswer)
+            //問題が全部入力された
+            if (!bCheckAnswer || curQues.corAns.ToString().Length != selectedAns.Length)
                 return;
 
             var currentCorrect = curQues.corAns.ToString();
 
-            string display =
-                selectedAns == currentCorrect ?
-                "正解" : "×";
+            bool isCorrect = false;
+            if(selectedAns == currentCorrect){
+                isCorrect = true;
+            }
+            
+            //正誤表示
+            string display = isCorrect ? "O" : "×";
+            //タイマー設定
+            timer = isCorrect ? TICK_O : TICK_X;
+
+            /*点数記録*/
+            if (isCorrect) CurrentlyLoginInfo.SCORE++;
 
             /*現在の問題は終了*/
             bCheckAnswer = false;
@@ -115,7 +130,7 @@ namespace Question
         }
 
         /*num番目問題にアップデートする*/
-        public void UpdateQuestion(int num)
+        void UpdateQuestion(int num)
         {
             //クリア
             ClearQuestion();
@@ -136,6 +151,18 @@ namespace Question
                     break;
             }
             setQues(curQues);
+        }
+        
+        /*次の問題を表示*/
+        public void UpdateToNextQuestion()
+        {
+            if (questions.Count <= curQuesNum)
+            {
+                SceneManager.LoadScene("ScoreScene");
+                return;
+            }
+
+            UpdateQuestion(curQuesNum++);
         }
 
         /*シーン上に残っている問題をClearする*/
