@@ -11,10 +11,14 @@ namespace Question
     public struct QuesStructor
     {
         public int type;
+        public string typetext;
         public string ques;
         public List<string> ans;
         public int corAns;
     }
+
+    //問題解きの状態
+    public enum SolveStatus { NotSelected, Correct, Incorrect};
 
     //インスタンスを生成し、初期化してから使う
     public class QuestionManager : ScriptableObject
@@ -22,7 +26,11 @@ namespace Question
         //現在の問題番号
         int curQuesNum = 0;
         //次の問題表示までのタイマー
-        const float TICK_O = 1.0f, TICK_X = 1.5f;
+        public const float TICK_O = 1.0f, TICK_X = 1.5f;
+
+        /*タイプの題を見せてから問題が出るまでのタイマー*/
+        const float TICK_NEXTQUES = 2.0f;
+        float timerForNextQues = 0;
 
         /*問題のリスト*/
         List<QuesStructor> questions;
@@ -32,6 +40,10 @@ namespace Question
         Text QuestionText;
         Button AnswerPrefab;
         Text AnswerText;
+        Text TypeText;
+
+        /*QuestionManagerオブジェクトの関数を呼ぶ場合使う*/
+        QuestionManagerObject ManagerObj;
 
         /*シーン上に存在する答えオブジェクトのリスト（オブジェクト管理のため）*/
         List<Button> CurAnswers;
@@ -42,7 +54,7 @@ namespace Question
         public static bool bCheckAnswer = false;
 
         /*新 初期化*/ //warning対策のため
-        public static void Create(ref QuestionManager Inst, Text quesTextObj, Button ansPrefab, Text answerTextObj, string fileName = "Lesson1")
+        public static void Create(ref QuestionManager Inst, Text quesTextObj, Button ansPrefab, Text answerTextObj,QuestionManagerObject obj, string fileName = "Lesson1")
         {
             Inst = CreateInstance<QuestionManager>();
 
@@ -59,6 +71,7 @@ namespace Question
             Inst.AnswerPrefab = ansPrefab;
             Inst.AnswerText = answerTextObj;
             Inst.CurAnswers = new List<Button>();
+            Inst.ManagerObj = obj;
         }
 
         /*旧 初期化*/
@@ -75,11 +88,20 @@ namespace Question
         //    AnswerText = answerTextObj;
         //    CurAnswers = new List<Button>();
         //}
-        
-        public void UpdateQuestion(ref float timer)
+
+        public void UpdateQuestion(ref float timer, ref SolveStatus status)
         {
-            CheckAnswerPhase(ref timer);
+            CheckAnswerPhase(ref timer, ref status);
             AnswerText.text = GetAnswerDisplay();
+
+            /*問題を出題するまで間を取る*/
+            if (timerForNextQues < 0)
+            {
+                UpdateQuestion(curQuesNum++);
+                timerForNextQues = 0;
+            }
+            else if (timerForNextQues > 0)
+                timerForNextQues -= Time.deltaTime;
         }
 
         /*答えから、文章の組み合わせを返す*/
@@ -98,7 +120,7 @@ namespace Question
         }
 
         /*答えチェック段階*/
-        void CheckAnswerPhase(ref float timer)
+        void CheckAnswerPhase(ref float timer, ref SolveStatus status)
         {
             //問題が全部入力された
             if (!bCheckAnswer || curQues.corAns.ToString().Length != selectedAns.Length)
@@ -115,9 +137,8 @@ namespace Question
             string display = isCorrect ? "O" : "×";
             //タイマー設定
             timer = isCorrect ? TICK_O : TICK_X;
-
-            /*点数記録*/
-            if (isCorrect) CurrentlyLoginInfo.SCORE++;
+            //正誤を伝える
+            status = isCorrect ? SolveStatus.Correct : SolveStatus.Incorrect;
 
             /*点数記録*/
             if (isCorrect) CurrentlyLoginInfo.SCORE++;
@@ -164,13 +185,18 @@ namespace Question
                 SceneManager.LoadScene("ScoreScene");
                 return;
             }
-
-            UpdateQuestion(curQuesNum++);
+            //クリア
+            ClearQuestion();
+            //タイプ文字を設定
+            ManagerObj.TypeTextUpdate(questions[curQuesNum].typetext);
+            timerForNextQues = TICK_NEXTQUES;
+            //UpdateQuestion(curQuesNum++);
         }
 
         /*シーン上に残っている問題をClearする*/
         public void ClearQuestion()
         {
+            ManagerObj.TypeTextUpdate(null);
             QuestionText.text = null;
             ClearAnswer();
 
@@ -220,7 +246,7 @@ namespace Question
             {
                 //ボタン生成
                 Button button = Instantiate(AnswerPrefab);
-                button.transform.SetParent(myCanvas.transform);
+                button.transform.SetParent(myCanvas.transform.GetChild(0));
 
                 //ボタンの名前は答え番号で
                 button.name = (i + 1).ToString();
@@ -254,7 +280,7 @@ namespace Question
             {
                 //ボタン生成
                 Button button = Instantiate(AnswerPrefab);
-                button.transform.SetParent(myCanvas.transform);
+                button.transform.SetParent(myCanvas.transform.GetChild(0));
 
                 //ボタンの名前は答え番号で
                 button.name = (i + 1).ToString();

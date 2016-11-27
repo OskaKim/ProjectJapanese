@@ -20,7 +20,7 @@ public class TitleSceneButtons : MonoBehaviour {
             timer -= Time.deltaTime;
             if(timer <= 0)
             {
-                SceneManager.LoadSceneAsync("Game");
+                SceneManager.LoadSceneAsync("SelectLevel");
             }
         }
     }

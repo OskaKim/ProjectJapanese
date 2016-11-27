@@ -6,6 +6,8 @@ public class GenerateButtonBasedUserRate : MonoBehaviour
 {
     [SerializeField]
     Button buttonPrefab;
+    [SerializeField]
+    Animator Panel;
 
     void Start()
     {
@@ -18,7 +20,7 @@ public class GenerateButtonBasedUserRate : MonoBehaviour
         {
             //ボタンの位置などの設定
             var button = Instantiate(buttonPrefab) as Button;
-            button.transform.SetParent(myCanvas.transform);
+            button.transform.SetParent(myCanvas.transform.GetChild(0));
             button.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, - i * 50);
 
             //各ボタンのレベルを指定
@@ -28,5 +30,13 @@ public class GenerateButtonBasedUserRate : MonoBehaviour
             var buttontext = button.transform.FindChild("Text").GetComponent<Text>();
             buttontext.text = "Level" + (i+1);
         }
+    }
+    public void ButtonClick(int level)
+    {
+        if (Panel.GetBool("bSelectEnd")) return;
+
+        CurrentlyLoginInfo.LEVEL = level;
+        Panel.SetBool("bSelectEnd", true);
+        //SceneManager.LoadScene("Game");
     }
 }
