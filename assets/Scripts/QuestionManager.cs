@@ -2,6 +2,8 @@
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
+using System.Linq;
+using System;
 
 /*問題に関する機能がまとめされている*/
 /*このスクリプトはゲームオブジェクトに貼らない*/
@@ -18,7 +20,7 @@ namespace Question
     }
 
     //問題解きの状態
-    public enum SolveStatus { NotSelected, Correct, Incorrect};
+    public enum SolveStatus {Waiting, Solving, Correct, Incorrect };
 
     //インスタンスを生成し、初期化してから使う
     public class QuestionManager : ScriptableObject
@@ -54,7 +56,7 @@ namespace Question
         public static bool bCheckAnswer = false;
 
         /*新 初期化*/ //warning対策のため
-        public static void Create(ref QuestionManager Inst, Text quesTextObj, Button ansPrefab, Text answerTextObj,QuestionManagerObject obj, string fileName = "Lesson1")
+        public static void Create(ref QuestionManager Inst, Text quesTextObj, Button ansPrefab, Text answerTextObj, QuestionManagerObject obj, string fileName = "Lesson1")
         {
             Inst = CreateInstance<QuestionManager>();
 
@@ -72,6 +74,9 @@ namespace Question
             Inst.AnswerText = answerTextObj;
             Inst.CurAnswers = new List<Button>();
             Inst.ManagerObj = obj;
+
+            //問題リストをシャッフル
+            Inst.ShuffleQuestions();
         }
 
         /*旧 初期化*/
@@ -88,6 +93,24 @@ namespace Question
         //    AnswerText = answerTextObj;
         //    CurAnswers = new List<Button>();
         //}
+
+        //シャッフル
+        void ShuffleQuestions()
+        {
+            int n = questions.Count;
+            QuesStructor t;
+            int i;
+
+            System.Random rnd = new System.Random();
+            
+            while(n > 0)
+            {
+                i = rnd.Next(0, n--);
+                t = questions[n];
+                questions[n] = questions[i];
+                questions[i] = t;
+            }
+        }
 
         public void UpdateQuestion(ref float timer, ref SolveStatus status)
         {
@@ -111,11 +134,11 @@ namespace Question
                 return null;
 
             string displayAns = null;
-            foreach(var ans in selectedAns)
+            foreach (var ans in selectedAns)
             {
                 displayAns += curQues.ans[(int)char.GetNumericValue(ans) - 1];
             }
-            
+
             return displayAns;
         }
 
@@ -123,16 +146,17 @@ namespace Question
         void CheckAnswerPhase(ref float timer, ref SolveStatus status)
         {
             //問題が全部入力された
-            if (!bCheckAnswer || curQues.corAns.ToString().Length != selectedAns.Length)
+            if (!bCheckAnswer || (selectedAns != null && curQues.corAns.ToString().Length != selectedAns.Length))
                 return;
 
             var currentCorrect = curQues.corAns.ToString();
 
             bool isCorrect = false;
-            if(selectedAns == currentCorrect){
+            if (selectedAns == currentCorrect)
+            {
                 isCorrect = true;
             }
-            
+
             //正誤表示
             string display = isCorrect ? "O" : "×";
             //タイマー設定
@@ -141,7 +165,7 @@ namespace Question
             status = isCorrect ? SolveStatus.Correct : SolveStatus.Incorrect;
 
             /*点数記録*/
-            if (isCorrect) CurrentlyLoginInfo.SCORE++;
+            if (isCorrect) ++CurrentlyUserInfo.score;
 
             /*現在の問題は終了*/
             bCheckAnswer = false;
@@ -175,8 +199,9 @@ namespace Question
                     break;
             }
             setQues(curQues);
+            ManagerObj.status = SolveStatus.Solving;
         }
-        
+
         /*次の問題を表示*/
         public void UpdateToNextQuestion()
         {
@@ -240,13 +265,14 @@ namespace Question
 
             QuestionDefaultlySetting(ques);
 
-            Vector2 offset = new Vector2(200, Screen.height/2);
+            Vector2 offset = new Vector2(10, Screen.height / 2 + 50);
 
-            for(int i = 0; i < ques.ans.Count; ++i)
+            for (int i = 0; i < ques.ans.Count; ++i)
             {
                 //ボタン生成
                 Button button = Instantiate(AnswerPrefab);
                 button.transform.SetParent(myCanvas.transform.GetChild(0));
+                button.GetComponent<RectTransform>().localScale = new Vector3(1, 1, 1);
 
                 //ボタンの名前は答え番号で
                 button.name = (i + 1).ToString();
@@ -262,7 +288,7 @@ namespace Question
                 //位置設定
                 //float offset = buttonsize.x;
                 button.transform.position = offset;
-                offset = new Vector2(offset.x + buttonsize.x, offset.y);
+                offset = new Vector2(offset.x + buttonsize.x * myCanvas.GetComponent<RectTransform>().localScale.x, offset.y);
 
                 //管理のため、リストに入れる
                 CurAnswers.Add(button);
@@ -274,13 +300,15 @@ namespace Question
 
             QuestionDefaultlySetting(ques);
 
-            Vector2 offset = new Vector2(200, Screen.height / 2 + 100);
+            Vector2 offset = new Vector2(50, Screen.height / 2 + 50);
 
             for (int i = 0; i < ques.ans.Count; ++i)
             {
                 //ボタン生成
                 Button button = Instantiate(AnswerPrefab);
                 button.transform.SetParent(myCanvas.transform.GetChild(0));
+
+                button.GetComponent<RectTransform>().localScale = new Vector3(1, 1, 1);
 
                 //ボタンの名前は答え番号で
                 button.name = (i + 1).ToString();
@@ -296,7 +324,7 @@ namespace Question
                 //位置設定
                 //float offset = buttonsize.x;
                 button.transform.position = offset;
-                offset = new Vector2(offset.x, offset.y - buttonsize.y);
+                offset = new Vector2(offset.x, offset.y - buttonsize.y * myCanvas.GetComponent<RectTransform>().localScale.y);
 
                 //管理のため、リストに入れる
                 CurAnswers.Add(button);
