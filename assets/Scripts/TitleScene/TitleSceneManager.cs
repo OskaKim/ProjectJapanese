@@ -7,12 +7,15 @@ public class TitleSceneManager : MonoBehaviour
     Transform TapText;
     [SerializeField]
     Transform ButtonsPanel;
+    [SerializeField]
+    Transform CreditPanel;
     
     //現在のシーケンス
     Sequence curSequence;
 
     void Start()
     {
+        Time.timeScale = 1;
         curSequence = Sequence_Initialize;
         curSequence();
     }
@@ -42,5 +45,14 @@ public class TitleSceneManager : MonoBehaviour
     void Sequence_SelectButton()
     {
 
+    }
+
+    public void OpenCredit()
+    {
+        CreditPanel.gameObject.SetActive(true);
+    }
+    public void CloseCredit()
+    {
+        CreditPanel.gameObject.SetActive(false);
     }
 }

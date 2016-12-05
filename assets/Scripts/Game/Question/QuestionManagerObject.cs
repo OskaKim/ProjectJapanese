@@ -22,6 +22,10 @@ public class QuestionManagerObject : MonoBehaviour
     Text TypeText;
     [SerializeField]
     Text TimeoutText;
+    [SerializeField]
+    Scrollbar TimerBar;
+    [SerializeField]
+    SEManager SEManagerPrefab;
 
     Question.QuestionManager QuestionFuncs;
 
@@ -37,8 +41,9 @@ public class QuestionManagerObject : MonoBehaviour
 
     void Start()
     {
+        SEManagerPrefab = Instantiate(SEManagerPrefab) as SEManager;
         //初期化
-        Question.QuestionManager.Create(ref QuestionFuncs, QuestionText, AnswerPrefab, AnswerText, this, "Lesson" + CurrentlyUserInfo.selectedLevel.ToString());
+        Question.QuestionManager.Create(ref QuestionFuncs, SEManagerPrefab, QuestionText, AnswerPrefab, AnswerText, this, "Lesson" + CurrentlyUserInfo.selectedLevel.ToString());
         status = Question.SolveStatus.Waiting;
     }
     public void StartAnimationEnd()
@@ -48,11 +53,9 @@ public class QuestionManagerObject : MonoBehaviour
 
     void Update()
     {
-        Debug.Log(status);
-
         QuestionFuncs.UpdateQuestion(ref timerForNextQues, ref status);
 
-
+        
         /*timerForNextQuesが更新されたら、timerForNextQues秒後に次の問題を出力*/
         if (timerForNextQues > 0.0f)
         {
@@ -66,8 +69,11 @@ public class QuestionManagerObject : MonoBehaviour
         }
         else
         {
-            //制限時間を数える
-            timeoutTimer -= Time.deltaTime;
+            if (status == Question.SolveStatus.Solving)
+            {
+                //制限時間を数える
+                timeoutTimer -= Time.deltaTime;
+            }
 
             //時間切れ
             if (timeoutTimer <= 0)
@@ -82,6 +88,9 @@ public class QuestionManagerObject : MonoBehaviour
             
             //テキストオブジェクトに出力
             TimeoutText.text = "残り：" + (int)timeoutTimer + "秒";
+
+            //タイマーをスクロールバーで表示
+            TimerBar.size = timeoutTimer / TIMEOUTTICK;
         }
 
         ////問題がまだ設定されていない状況なら処理終了
@@ -96,8 +105,9 @@ public class QuestionManagerObject : MonoBehaviour
                 CurrentScoreText.text = "点数：" + CurrentlyUserInfo.score.ToString();
                 break;
             case Question.SolveStatus.Incorrect:
-                if (!Panel.GetBool("Damaged"))
+                if (!Panel.GetBool("Damaged")){
                     Panel.SetBool("Damaged", true);
+                }
                 break;
             default:
                 break;

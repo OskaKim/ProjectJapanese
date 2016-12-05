@@ -55,8 +55,11 @@ namespace Question
         public static string selectedAns = null;
         public static bool bCheckAnswer = false;
 
+        /*サウンドエフェクトマネジャー*/
+        SEManager SEManagerInst;
+
         /*新 初期化*/ //warning対策のため
-        public static void Create(ref QuestionManager Inst, Text quesTextObj, Button ansPrefab, Text answerTextObj, QuestionManagerObject obj, string fileName = "Lesson1")
+        public static void Create(ref QuestionManager Inst, SEManager seManager, Text quesTextObj, Button ansPrefab, Text answerTextObj, QuestionManagerObject obj, string fileName = "Lesson1")
         {
             Inst = CreateInstance<QuestionManager>();
 
@@ -74,6 +77,7 @@ namespace Question
             Inst.AnswerText = answerTextObj;
             Inst.CurAnswers = new List<Button>();
             Inst.ManagerObj = obj;
+            Inst.SEManagerInst = seManager;
 
             //問題リストをシャッフル
             Inst.ShuffleQuestions();
@@ -159,10 +163,20 @@ namespace Question
 
             //正誤表示
             string display = isCorrect ? "O" : "×";
-            //タイマー設定
-            timer = isCorrect ? TICK_O : TICK_X;
-            //正誤を伝える
-            status = isCorrect ? SolveStatus.Correct : SolveStatus.Incorrect;
+
+            //正誤によるパラメータ設定
+            if(isCorrect)
+            {
+                timer = TICK_O;
+                status = SolveStatus.Correct;
+                SEManagerInst.Play(SEManager.SEs.Correct);
+            }
+            else
+            {
+                timer = TICK_X;
+                status = SolveStatus.Incorrect;
+                SEManagerInst.Play(SEManager.SEs.InCorrect);
+            }
 
             /*点数記録*/
             if (isCorrect) ++CurrentlyUserInfo.score;
@@ -197,9 +211,14 @@ namespace Question
                 case 3:
                     setQues = new SetQuestion(SetQuestion_type2);
                     break;
+                //別のタイプを追加する場合は新しい関数か、適する関数を呼出す必要がある。
+                default:
+                    setQues = new SetQuestion(SetQuestion_type2);
+                    break;
             }
             setQues(curQues);
             ManagerObj.status = SolveStatus.Solving;
+            Debug.Log(ManagerObj.status);
         }
 
         /*次の問題を表示*/

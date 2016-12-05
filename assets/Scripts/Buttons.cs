@@ -12,9 +12,10 @@ public class Buttons : MonoBehaviour {
     {
         SceneManager.LoadScene("SelectLevel");
     }
-    public void LoadScene_Lesson1()
+    public void LoadScene_Game()
     {
         SceneManager.LoadScene("Game");
+        Time.timeScale = 1;
     }
     public void LoadScene_ScoreScene()
     {

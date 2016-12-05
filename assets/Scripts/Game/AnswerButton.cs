@@ -23,7 +23,7 @@ public class AnswerButton : MonoBehaviour {
             }
         }
 
-        /*タイプ*/
+        /*タイプによって異なる*/
         switch (Question.QuestionManager.curType)
         {
             case 1:
@@ -36,6 +36,8 @@ public class AnswerButton : MonoBehaviour {
                 Question.QuestionManager.selectedAns = curAns.ToString();
                 break;
             default:
+                //答えに初期化
+                Question.QuestionManager.selectedAns = curAns.ToString();
                 Debug.Log("問題のタイプ設定が正しくありません。");
                 break;
         }
