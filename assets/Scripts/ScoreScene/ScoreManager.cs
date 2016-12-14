@@ -11,28 +11,68 @@ public class ScoreManager : MonoBehaviour {
     [SerializeField]
     Text newScoreDisplayText;
 
+    //表示する値
+    float myScore_DisplayValue;
+    float myHighScore_DisplayValue;
+    float myScore_RealValue;
+    float myHighScore_RealValue;
+
+    //カウントするエフェクトを表すためのタイマー
+    float countTimer = 0;
+    const float countTick = 0.05f;
+
     void Start()
     {
         FileSystem.SaveLoadManager save = new FileSystem.SaveLoadManager();
-        int highscore, score;
-        highscore = save.GetScore(CurrentlyUserInfo.selectedLevel);
-        score = CurrentlyUserInfo.score;
+        myHighScore_RealValue = save.GetScore(CurrentlyUserInfo.selectedLevel);
+        myScore_RealValue = CurrentlyUserInfo.score * 10;
 
         //HighScore更新
-        if (highscore < score)
+        if (myHighScore_RealValue < myScore_RealValue)
         {
-            highscore = score;
+            myHighScore_RealValue = myScore_RealValue;
             newScoreDisplayText.enabled = true;
         }
 
-        //点数表示
-        myScore.text = score.ToString();
-        myHighScore.text = highscore.ToString();
-
         //ファイル更新
-        save.SetScore(highscore, CurrentlyUserInfo.selectedLevel);
+        save.SetScore((int)myHighScore_RealValue, CurrentlyUserInfo.selectedLevel);
         
         //現在のユーザー情報を初期化
         CurrentlyUserInfo.DeleteAll();
+
+        //表示するためのvalue
+        myScore_DisplayValue = 0;
+        myHighScore_DisplayValue = 0;
+        UpdateScoreText();
+    }
+
+    void UpdateScoreText()
+    {
+        //点数表示
+        myScore.text = myScore_DisplayValue.ToString();
+        myHighScore.text = myHighScore_DisplayValue.ToString();
+    }
+
+    void Update()
+    {
+        CountEffect();
+    }
+
+    void CountEffect()
+    {
+        countTimer += Time.deltaTime;
+        if (countTimer >= countTick)
+        {
+            countTimer = 0;
+            if(myScore_DisplayValue < myScore_RealValue)
+            {
+                myScore_DisplayValue++;
+            }
+            if(myHighScore_DisplayValue < myHighScore_RealValue)
+            {
+                myHighScore_DisplayValue++;
+            }
+        }
+        UpdateScoreText();
     }
 }

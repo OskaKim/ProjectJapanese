@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class TitleSceneManager : MonoBehaviour
 {
@@ -9,6 +10,8 @@ public class TitleSceneManager : MonoBehaviour
     Transform ButtonsPanel;
     [SerializeField]
     Transform CreditPanel;
+    [SerializeField]
+    Text TimeInfoText;    
     
     //現在のシーケンス
     Sequence curSequence;
@@ -18,6 +21,15 @@ public class TitleSceneManager : MonoBehaviour
         Time.timeScale = 1;
         curSequence = Sequence_Initialize;
         curSequence();
+
+        //ファイルから読み込み
+        FileSystem.SaveLoadManager loadMng = new FileSystem.SaveLoadManager();
+        
+        var prev = loadMng.GetPrevTime();
+        /*時間表示*/
+        string timeinfo_display = "前回：" + prev;
+        timeinfo_display += "\n現在：" + System.DateTime.Now;
+        TimeInfoText.text = timeinfo_display;
     }
 
     void Update()

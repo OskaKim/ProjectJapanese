@@ -35,11 +35,11 @@ public class CharacterStatusManager : MonoBehaviour {
                 break;
             case Question.SolveStatus.Correct:
                 CharacterController.Correct();
-                status = Question.SolveStatus.Waiting;
+                Question_Mng.status = Question.SolveStatus.Waiting;
                 break;
             case Question.SolveStatus.Incorrect:
                 CharacterController.InCorrect();
-                status = Question.SolveStatus.Waiting;
+                Question_Mng.status = Question.SolveStatus.Waiting;
                 break;
         }
     }

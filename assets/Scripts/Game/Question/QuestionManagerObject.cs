@@ -15,6 +15,8 @@ public class QuestionManagerObject : MonoBehaviour
     [SerializeField]
     Text AnswerText;
     [SerializeField]
+    Text CorrectAnswerText;
+    [SerializeField]
     Animator Panel;
     [SerializeField]
     Text CurrentScoreText;
@@ -26,6 +28,16 @@ public class QuestionManagerObject : MonoBehaviour
     Scrollbar TimerBar;
     [SerializeField]
     SEManager SEManagerPrefab;
+    [SerializeField]
+    Animator CorrectImageAnimation;
+    [SerializeField]
+    Animator IncorrectImageAnimation;
+    [SerializeField]
+    Transform Boss;
+    [SerializeField]
+    Animator WarningAnimator;
+    [SerializeField]
+    GameObject[] ObjectsForWarningAnimation = new GameObject[0];
 
     Question.QuestionManager QuestionFuncs;
 
@@ -41,9 +53,11 @@ public class QuestionManagerObject : MonoBehaviour
 
     void Start()
     {
+        //SEのインスタンス生成
         SEManagerPrefab = Instantiate(SEManagerPrefab) as SEManager;
+        SEManagerPrefab.name = "SEs";
         //初期化
-        Question.QuestionManager.Create(ref QuestionFuncs, SEManagerPrefab, QuestionText, AnswerPrefab, AnswerText, this, "Lesson" + CurrentlyUserInfo.selectedLevel.ToString());
+        Question.QuestionManager.Create(ref QuestionFuncs, SEManagerPrefab, QuestionText, AnswerPrefab, AnswerText, CorrectAnswerText, this, "Lesson" + CurrentlyUserInfo.selectedLevel.ToString());
         status = Question.SolveStatus.Waiting;
     }
     public void StartAnimationEnd()
@@ -54,8 +68,7 @@ public class QuestionManagerObject : MonoBehaviour
     void Update()
     {
         QuestionFuncs.UpdateQuestion(ref timerForNextQues, ref status);
-
-        
+                
         /*timerForNextQuesが更新されたら、timerForNextQues秒後に次の問題を出力*/
         if (timerForNextQues > 0.0f)
         {
@@ -112,6 +125,13 @@ public class QuestionManagerObject : MonoBehaviour
             default:
                 break;
         }
+
+        //WarningAnimation終了
+        if(WarningAnimation && WarningAnimator.GetBool("IsEnd"))
+        {
+            WarningAnimation = false;
+            QuestionFuncs.UpdateToNextQuestion();
+        }
     }
 
     public void ClearAnswerButton()
@@ -122,5 +142,40 @@ public class QuestionManagerObject : MonoBehaviour
     public void TypeTextUpdate(string text)
     {
         TypeText.text = text;
+    }
+
+    /*Animation*/
+    public void PlayAnimation_CorrectImage()
+    {
+        CorrectImageAnimation.SetBool("bFlag", true);
+    }
+    public void PlayAnimation_IncorrectImage()
+    {
+        IncorrectImageAnimation.SetBool("bFlag", true);
+    }
+
+    /*ボスオブジェクト*/
+    public Transform GetBossTransform()
+    {
+        return Boss;
+    }
+
+    //warning animaion
+    bool mWarningAnimation = false;
+    public bool WarningAnimation
+    {
+        get
+        {
+            return mWarningAnimation;
+        }
+        set
+        {
+            mWarningAnimation = value;
+            WarningAnimator.gameObject.SetActive(value);
+            //かかわるオブジェクトを設定
+            foreach (var o in ObjectsForWarningAnimation){
+                o.SetActive(value);
+            }
+        }
     }
 }

@@ -96,6 +96,7 @@ namespace FileSystem
         /*ファイルから問題を読み込み、questionsリストに格納する*/
         public void SetQuestions(ref List<Question.QuesStructor> question)
         {
+            question.Clear();
             SetTypeText();
             //ファイルからList<string>を得て格納
             List<string> allLines = SetToStringList(LoadStringFromFile());
@@ -153,6 +154,10 @@ namespace FileSystem
     public class SaveLoadManager : FileManager
     {
         const int MAXLEVEL = 6;
+        //ファイルに含まれている属性
+        public enum PROPERTY_TYPE { POINT, MAX } //ポイント、
+        //ファイルに含まれている時間の情報
+        public enum TIME_TYPE { YY, MM, DD, hh, mm, ss, MAX} //年、月、日、時、分、秒
 
         public SaveLoadManager(string name = "save.txt")
         {
@@ -165,6 +170,13 @@ namespace FileSystem
         /*Scoreを得る*/
         public int GetScore(int rate)
         {
+            //ゲームをやらずに点数参照をする際発生
+            if (rate == 0)
+            {
+                Debug.Log("難易度が設定されていません。");
+                return 0;
+            }
+
             string line;
             int score = -1;
 
@@ -190,11 +202,11 @@ namespace FileSystem
                 return 0;
                 //Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
             }
+            
             return score;
         }
-
         /*Scoreを設定する*/
-        public void SetScore(int score, int rate)
+        public void SetScore(int rate, int score)
         {
             string[] lines = System.IO.File.ReadAllLines(filename);
 
@@ -210,7 +222,172 @@ namespace FileSystem
 
             System.IO.File.WriteAllLines(filename, lines);
         }
-        
+        /*Scoreを足し算する*/
+        public void AddScore(int rate, int addScore)
+        {
+            SetScore(rate, GetScore(rate) + addScore);
+        }
+
+        /*PROPERTYの値を取得*/
+        public int GetNumOfProp(PROPERTY_TYPE property)
+        {
+            string line;
+            int num = -1;
+
+            using (StreamReader theReader = new StreamReader(filename))
+            {
+                do
+                {
+                    line = theReader.ReadLine();
+
+                    //特定値獲得
+                    if (line == '#' + property.ToString())
+                    {
+                        num = int.Parse(theReader.ReadLine());
+                        break;
+                    }
+                } while (theReader.Peek() >= 0);
+            }
+
+            //エラー
+            if (num == -1)
+            {
+                AddUser();
+                return 0;
+                //Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
+            }
+            return num;
+        }
+        /*PROPERTYの値を設定*/
+        public void SetNumOfProp(PROPERTY_TYPE property, int num)
+        {
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+            for (int i = 0; i < lines.Length; ++i)
+            {
+                if (lines[i] == '#' + property.ToString())
+                {
+                    lines[i + 1] = num.ToString();
+                    Debug.Log("属性の値設定成功");
+                    break;
+                }
+            }
+
+            System.IO.File.WriteAllLines(filename, lines);
+        }
+        /*PROPERTYの値を足し算する*/
+        public void AddNumOfProp(PROPERTY_TYPE property, int addNum)
+        {
+            SetNumOfProp(property, GetNumOfProp(property) + addNum);
+        }
+
+
+        /*最後の接続時間を取得*/
+        public System.DateTime GetPrevTime()
+        {
+            int YY = -1, MM = 0, DD = 0, hh = 0, mm = 0, ss = 0;
+            using (StreamReader theReader = new StreamReader(filename))
+            {
+                string line;
+                do
+                {
+                    line = theReader.ReadLine();
+
+                    //年度
+                    if (line == '#' + TIME_TYPE.YY.ToString())
+                    {
+                        YY = int.Parse(theReader.ReadLine());
+                    }
+                    //月
+                    else if (line == '#' + TIME_TYPE.MM.ToString())
+                    {
+                        MM = int.Parse(theReader.ReadLine());
+                    }
+                    //日
+                    else if (line == '#' + TIME_TYPE.DD.ToString())
+                    {
+                        DD = int.Parse(theReader.ReadLine());
+                    }
+                    //時
+                    else if (line == '#' + TIME_TYPE.hh.ToString())
+                    {
+                        hh = int.Parse(theReader.ReadLine());
+                    }
+                    //分
+                    else if (line == '#' + TIME_TYPE.mm.ToString())
+                    {
+                        mm = int.Parse(theReader.ReadLine());
+                    }
+                    //秒
+                    else if (line == '#' + TIME_TYPE.ss.ToString())
+                    {
+                        ss = int.Parse(theReader.ReadLine());
+                    }
+                } while (theReader.Peek() >= 0);
+            }
+            System.DateTime temp;
+            //エラー
+            if (YY == -1)
+            {
+                AddUser();
+                temp = System.DateTime.Now;
+                //Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
+            }
+            else
+                temp = new System.DateTime(YY, MM, DD, hh, mm, ss);
+
+            return temp;
+        }
+        /*現在の時間を最後に接続した時間としてファイルにセーブ*/
+        public void SetCurrentTime()
+        {
+            System.DateTime CurDate = System.DateTime.Now;
+            string[] lines = System.IO.File.ReadAllLines(filename);
+
+            for (int i = 0; i < lines.Length; ++i)
+            {
+                if (lines[i] == '#' + TIME_TYPE.YY.ToString())
+                {
+                    lines[i + 1] = CurDate.Year.ToString();
+                }
+                else if (lines[i] == '#' + TIME_TYPE.MM.ToString())
+                {
+                    lines[i + 1] = CurDate.Month.ToString();
+                }
+                else if (lines[i] == '#' + TIME_TYPE.DD.ToString())
+                {
+                    lines[i + 1] = CurDate.Day.ToString();
+                }
+                else if (lines[i] == '#' + TIME_TYPE.hh.ToString())
+                {
+                    lines[i + 1] = CurDate.Hour.ToString();
+                }
+                else if (lines[i] == '#' + TIME_TYPE.mm.ToString())
+                {
+                    lines[i + 1] = CurDate.Minute.ToString();
+                }
+                else if (lines[i] == '#' + TIME_TYPE.ss.ToString())
+                {
+                    lines[i + 1] = CurDate.Second.ToString();
+                }
+            }
+
+            System.IO.File.WriteAllLines(filename, lines);
+        }
+        /*現在の時間と最後に接続した時間の間の差*/
+        public System.TimeSpan GetTimeGap()
+        {
+            System.DateTime departure = GetPrevTime(); // 最後に接続した日
+            System.DateTime arrival = System.DateTime.Now; // 現在
+            System.TimeSpan gap = arrival - departure;
+            return gap;
+        }
+        /*何日の時間差かを求める*/
+        public int GetTimeGap_Days()
+        {
+            return GetTimeGap().Days;
+        }
+
         /*レートを取得*/
         public int GetRate()
         {
@@ -258,12 +435,28 @@ namespace FileSystem
 
             using (StreamWriter sw = new StreamWriter(filename, false))
             {
+                //点数追加
                 for (int i = 0; i < MAXLEVEL; ++i)
                 {
                     sw.WriteLine('#' + (i+1).ToString()); // add rate line
                     sw.WriteLine(0); // add score line
                 }
+
+                //属性追加
+                for(int i = 0; i < (int)PROPERTY_TYPE.MAX; ++i)
+                {
+                    sw.WriteLine('#' + ((PROPERTY_TYPE)i).ToString());
+                    sw.WriteLine(0);
+                }
+
+                //時間追加
+                for (int i = 0; i < (int)TIME_TYPE.MAX; ++i)
+                {
+                    sw.WriteLine('#' + ((TIME_TYPE)i).ToString());
+                    sw.WriteLine(0);
+                }
             }
+            SetCurrentTime();
             return true;
         }
         

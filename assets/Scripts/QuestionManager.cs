@@ -25,6 +25,8 @@ namespace Question
     //インスタンスを生成し、初期化してから使う
     public class QuestionManager : ScriptableObject
     {
+        //問題のファイルの名前
+        string fileName;
         //現在の問題番号
         int curQuesNum = 0;
         //次の問題表示までのタイマー
@@ -42,6 +44,7 @@ namespace Question
         Text QuestionText;
         Button AnswerPrefab;
         Text AnswerText;
+        Text CorrectAnswerText;
         Text TypeText;
 
         /*QuestionManagerオブジェクトの関数を呼ぶ場合使う*/
@@ -58,16 +61,24 @@ namespace Question
         /*サウンドエフェクトマネジャー*/
         SEManager SEManagerInst;
 
+        //ボスステージに進むに必要な点数
+        int passScoreToBoss;
+
+        /*
+        ボスステージだったら、trueの状態。
+        このparamを利用し、ボスだけの例外などを作成する。
+        */
+        bool bBossStage = false;
+
         /*新 初期化*/ //warning対策のため
-        public static void Create(ref QuestionManager Inst, SEManager seManager, Text quesTextObj, Button ansPrefab, Text answerTextObj, QuestionManagerObject obj, string fileName = "Lesson1")
+        public static void Create(ref QuestionManager Inst, SEManager seManager, Text quesTextObj, Button ansPrefab, Text answerTextObj, Text correctAnswerTextObj, QuestionManagerObject obj, string fileName = "Lesson1")
         {
             Inst = CreateInstance<QuestionManager>();
 
             //初期化
             Inst.questions = new List<QuesStructor>();
-
+            Inst.fileName = fileName;
             FileSystem.QuestionFileManager FileMng = new FileSystem.QuestionFileManager(fileName);
-
             //ファイルシステムから問題のリストを参照格納
             FileMng.SetQuestions(ref Inst.questions);
 
@@ -75,9 +86,11 @@ namespace Question
             Inst.QuestionText = quesTextObj;
             Inst.AnswerPrefab = ansPrefab;
             Inst.AnswerText = answerTextObj;
+            Inst.CorrectAnswerText = correctAnswerTextObj;
             Inst.CurAnswers = new List<Button>();
             Inst.ManagerObj = obj;
             Inst.SEManagerInst = seManager;
+            Inst.passScoreToBoss = FileMng.GetPassScore();
 
             //問題リストをシャッフル
             Inst.ShuffleQuestions();
@@ -116,10 +129,13 @@ namespace Question
             }
         }
 
+        //update
         public void UpdateQuestion(ref float timer, ref SolveStatus status)
         {
+            if(GetAnswerDisplay() != null)
+               AnswerText.text = GetAnswerDisplay();
+
             CheckAnswerPhase(ref timer, ref status);
-            AnswerText.text = GetAnswerDisplay();
 
             /*問題を出題するまで間を取る*/
             if (timerForNextQues < 0)
@@ -160,22 +176,26 @@ namespace Question
             {
                 isCorrect = true;
             }
-
-            //正誤表示
-            string display = isCorrect ? "O" : "×";
-
+            
             //正誤によるパラメータ設定
             if(isCorrect)
             {
+                ManagerObj.PlayAnimation_CorrectImage();
                 timer = TICK_O;
                 status = SolveStatus.Correct;
                 SEManagerInst.Play(SEManager.SEs.Correct);
             }
             else
             {
+                ManagerObj.PlayAnimation_IncorrectImage();
                 timer = TICK_X;
                 status = SolveStatus.Incorrect;
                 SEManagerInst.Play(SEManager.SEs.InCorrect);
+
+                //ユーザーが選んだ答えを赤色で表示
+                AnswerText.color = Color.red;
+                //正解を表示
+                DisplayCorrectAns(CorrectAnswerText);
             }
 
             /*点数記録*/
@@ -186,9 +206,17 @@ namespace Question
             currentCorrect = null;
             selectedAns = null;
             ClearQuestion();
+        }
 
-            //正誤表示
-            QuestionText.text = display;
+        /*正解を表示する*/
+        void DisplayCorrectAns(Text DisplayText)
+        {
+            string displayCorAns = "正解：";
+            foreach (var ans in curQues.corAns.ToString())
+            {
+                displayCorAns += curQues.ans[(int)char.GetNumericValue(ans) - 1];
+            }
+            DisplayText.text = displayCorAns;
         }
 
         /*num番目問題にアップデートする*/
@@ -224,9 +252,36 @@ namespace Question
         /*次の問題を表示*/
         public void UpdateToNextQuestion()
         {
+            /*ボスステージ*/
             if (questions.Count <= curQuesNum)
             {
-                SceneManager.LoadScene("ScoreScene");
+                /** ボスステージに入る前の条件
+                * 1 ボスステージ進入前
+                * 2 ステージのパース点数を超えた */
+                if (!bBossStage && passScoreToBoss <= CurrentlyUserInfo.score)
+                {
+                    bBossStage = true;
+                    ManagerObj.GetBossTransform().gameObject.SetActive(true);
+                    curQuesNum = 0;
+                    /*ボスステージに問題再設定*/
+                    {
+                        FileSystem.QuestionFileManager FileMng = new FileSystem.QuestionFileManager(fileName + "Boss");
+                        //ファイルシステムから問題のリストを参照格納
+                        FileMng.SetQuestions(ref questions);
+                        //問題リストをシャッフル
+                        ShuffleQuestions();
+                    }
+                    //クリア
+                    ClearQuestion();
+                    //warning animation　始動
+                    ManagerObj.WarningAnimation = true;
+                }
+                //ボスステージクリア
+                else if(bBossStage)
+                {
+                    SceneManager.LoadScene("ScoreScene");
+                    //return;
+                }
                 return;
             }
             //クリア
@@ -234,6 +289,10 @@ namespace Question
             //タイプ文字を設定
             ManagerObj.TypeTextUpdate(questions[curQuesNum].typetext);
             timerForNextQues = TICK_NEXTQUES;
+            //答え表示オブジェクト再設定
+            AnswerText.color = Color.black;
+            AnswerText.text = null;
+            CorrectAnswerText.text = null;
             //UpdateQuestion(curQuesNum++);
         }
 
@@ -243,6 +302,8 @@ namespace Question
             ManagerObj.TypeTextUpdate(null);
             QuestionText.text = null;
             ClearAnswer();
+            //AnswerText.text = null;
+            //AnswerText.color = Color.black;
 
             if (CurAnswers != null)
             {
@@ -253,7 +314,7 @@ namespace Question
                 CurAnswers.Clear();
             }
         }
-
+        
         /*答えリストを初期化*/
         public void ClearAnswer()
         {
@@ -266,8 +327,9 @@ namespace Question
         /*ボタンのサイズ設定(全てのタイプで同じ処理)*/
         void SetButtonSize(Text buttonText, RectTransform buttonRectTransfrom, ref Vector2 buttonsize)
         {
+            const float addedWidth = 50f, addedHeight = 5f;
             float LengthofString = buttonText.text.Length;
-            buttonsize = new Vector2(buttonText.fontSize * LengthofString, buttonsize.y);
+            buttonsize = new Vector2(buttonText.fontSize * LengthofString + addedWidth, buttonsize.y + addedHeight);
             buttonRectTransfrom.sizeDelta = buttonsize;
         }
 
@@ -290,7 +352,7 @@ namespace Question
             {
                 //ボタン生成
                 Button button = Instantiate(AnswerPrefab);
-                button.transform.SetParent(myCanvas.transform.GetChild(0));
+                button.transform.SetParent(myCanvas.transform.FindChild("Panel"));
                 button.GetComponent<RectTransform>().localScale = new Vector3(1, 1, 1);
 
                 //ボタンの名前は答え番号で
@@ -325,7 +387,7 @@ namespace Question
             {
                 //ボタン生成
                 Button button = Instantiate(AnswerPrefab);
-                button.transform.SetParent(myCanvas.transform.GetChild(0));
+                button.transform.SetParent(myCanvas.transform.FindChild("Panel"));
 
                 button.GetComponent<RectTransform>().localScale = new Vector3(1, 1, 1);
 
@@ -342,8 +404,9 @@ namespace Question
 
                 //位置設定
                 //float offset = buttonsize.x;
+                const float spaceBetweenButtons = 0.1f;
                 button.transform.position = offset;
-                offset = new Vector2(offset.x, offset.y - buttonsize.y * myCanvas.GetComponent<RectTransform>().localScale.y);
+                offset = new Vector2(offset.x, offset.y - buttonsize.y *(spaceBetweenButtons + myCanvas.GetComponent<RectTransform>().localScale.y));
 
                 //管理のため、リストに入れる
                 CurAnswers.Add(button);
