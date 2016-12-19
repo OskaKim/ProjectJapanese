@@ -35,6 +35,12 @@ namespace UnityStandardAssets.Characters.ThirdPerson
             if (DEFAULT_RUN_SPEED < v)
                 v -= addspeed * Time.deltaTime;
         }
+        public void Stopping()
+        {
+            const float stopSpeed = 0.1f;
+            v -= stopSpeed * Time.deltaTime;
+            if (v < 0) v = 0;
+        }
         
         private void Start()
         {

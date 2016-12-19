@@ -11,7 +11,9 @@ public class TitleSceneManager : MonoBehaviour
     [SerializeField]
     Transform CreditPanel;
     [SerializeField]
-    Text TimeInfoText;    
+    Text TimeInfoText;
+    [SerializeField]
+    Popup PointPopup;
     
     //現在のシーケンス
     Sequence curSequence;
@@ -24,12 +26,24 @@ public class TitleSceneManager : MonoBehaviour
 
         //ファイルから読み込み
         FileSystem.SaveLoadManager loadMng = new FileSystem.SaveLoadManager();
-        
         var prev = loadMng.GetPrevTime();
+
         /*時間表示*/
         string timeinfo_display = "前回：" + prev;
         timeinfo_display += "\n現在：" + System.DateTime.Now;
         TimeInfoText.text = timeinfo_display;
+
+        //少なくとも最後の接続から１日は超える場合
+        if (loadMng.GetTimeGap_Days() > 1)
+        {
+            //popupStart
+            PointPopup.PopupStart();
+            //ポイント変更の情報表示
+            PointPopup.transform.FindChild("Text").GetComponent<Text>().text = loadMng.UpdatePoint_BasedTime();
+        }
+
+        //現在の時間を設定
+        loadMng.SetCurrentTime();
     }
 
     void Update()

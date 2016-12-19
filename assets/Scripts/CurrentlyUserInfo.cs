@@ -34,4 +34,32 @@ public struct CurrentlyUserInfo
             PlayerPrefs.SetInt("SCORE", value);
         }
     }
+    public static int bossScore
+    {
+        get
+        {
+            return PlayerPrefs.GetInt("BOSSSCORE");
+        }
+        set
+        {
+            PlayerPrefs.SetInt("BOSSSCORE", value);
+        }
+    }
+    public static bool bBoss
+    {
+        get
+        {
+            if (PlayerPrefs.GetInt("bBoss") != 0)
+                return true;
+            else
+                return false;
+        }
+        set
+        {
+            if (value == true)
+                PlayerPrefs.SetInt("bBoss", 1);
+            else
+                PlayerPrefs.SetInt("bBoss", 0);
+        }
+    }
 }

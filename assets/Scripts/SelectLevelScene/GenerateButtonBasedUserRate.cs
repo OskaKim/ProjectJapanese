@@ -34,8 +34,11 @@ public class GenerateButtonBasedUserRate : MonoBehaviour
 
             //ボタンに表示するテキストの設定
             var buttontext = button.transform.FindChild("Text").GetComponent<Text>();
+
+            int score = 0, bossscore = 0;
+            SaveLoadMng.GetScore(i + 1, ref score, ref bossscore);
             buttontext.text = "Level" + (i + 1) +
-                ": " + SaveLoadMng.GetScore(i + 1) + "点";            
+                ": " + score + "点、" + bossscore + "ボス点";
         }
     }
     public void ButtonClick(int level)

@@ -9,6 +9,7 @@ namespace FileSystem
     {
         protected string filename;
         protected string filepath;
+        protected string filenameExceptPath;
     }
 
     /*問題用*/
@@ -19,8 +20,9 @@ namespace FileSystem
 
         public QuestionFileManager(string name, string path = "Files/Questions/")
         {
-            base.filepath = path;
-            base.filename = filepath + name;
+            filenameExceptPath = name;
+            filepath = path;
+            filename = filepath + name;
         }
 
         /*ファイルからstringを得る*/
@@ -65,6 +67,29 @@ namespace FileSystem
             }
             Debug.Log("FileSystem::QuestionFileManager::GetPassScore()で値取得失敗");
             return -1;
+        }
+        /*問題の個数を求める*/
+        public int GetNumOfQuestions()
+        {
+            //ファイルからList<string>を得て格納
+            List<string> allLines = SetToStringList(LoadStringFromFile());
+            int num = 0;
+            //最初文字がQである文字列を全部探し、数える
+            for (int i = 0; i < allLines.Count; ++i)
+            {
+                string aLine = allLines[i];
+                if (aLine[0] == 'Q')
+                {
+                    ++num;
+                }
+            }
+            return num;
+        }
+        public int GetNumOfQuestionsofBoss()
+        {
+            //ボスの問題個数
+            QuestionFileManager file = new QuestionFileManager(filenameExceptPath + "Boss");
+            return file.GetNumOfQuestions();
         }
         /*ファイルから得たsringをList<string>に格納*/
         List<string> SetToStringList(string stringFromFile)
@@ -168,45 +193,65 @@ namespace FileSystem
         }
 
         /*Scoreを得る*/
-        public int GetScore(int rate)
+        public void GetScore(int rate, ref int score, ref int bossScore)
         {
-            //ゲームをやらずに点数参照をする際発生
-            if (rate == 0)
-            {
-                Debug.Log("難易度が設定されていません。");
-                return 0;
-            }
+            string[] lines = System.IO.File.ReadAllLines(filename);
 
-            string line;
-            int score = -1;
-
-            using (StreamReader theReader = new StreamReader(filename))
+            for (int i = 0; i < lines.Length; ++i)
             {
-                do
+                if (lines[i] == '#' + rate.ToString())
                 {
-                    line = theReader.ReadLine();
-
-                    //特定値獲得
-                    if (line == '#' + rate.ToString())
+                    try
                     {
-                        score = int.Parse(theReader.ReadLine());
-                        break;
+                        score = int.Parse(lines[i + 1]);
+                        bossScore = int.Parse(lines[i + 2]);
                     }
-                } while (theReader.Peek() >= 0);
+                    catch
+                    {
+                        AddUser();
+                        score = 0;
+                        bossScore = 0;
+                    }
+                    break;
+                }
             }
+            ////ゲームをやらずに点数参照をする際発生
+            //if (rate == 0)
+            //{
+            //    Debug.Log("難易度が設定されていません。");
+            //    return 0;
+            //}
 
-            //エラー
-            if (score == -1)
-            {
-                AddUser();
-                return 0;
-                //Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
-            }
-            
-            return score;
+            //string line;
+            //int score = -1;
+
+            //using (StreamReader theReader = new StreamReader(filename))
+            //{
+            //    do
+            //    {
+            //        line = theReader.ReadLine();
+
+            //        //特定値獲得
+            //        if (line == '#' + rate.ToString())
+            //        {
+            //            score = int.Parse(theReader.ReadLine());
+            //            break;
+            //        }
+            //    } while (theReader.Peek() >= 0);
+            //}
+
+            ////エラー
+            //if (score == -1)
+            //{
+            //    AddUser();
+            //    return 0;
+            //    //Debug.Log("SaveLaodManager::GetScoreByID関数から特定値取得に失敗しました。");
+            //}
+
+            //return score;
         }
         /*Scoreを設定する*/
-        public void SetScore(int rate, int score)
+        public void SetScore(int rate, int score, int bossScore)
         {
             string[] lines = System.IO.File.ReadAllLines(filename);
 
@@ -215,6 +260,7 @@ namespace FileSystem
                 if(lines[i] == '#' + rate.ToString())
                 {
                     lines[i + 1] = score.ToString();
+                    lines[i + 2] = bossScore.ToString();
                     Debug.Log("点数設定成功");
                     break;
                 }
@@ -223,10 +269,10 @@ namespace FileSystem
             System.IO.File.WriteAllLines(filename, lines);
         }
         /*Scoreを足し算する*/
-        public void AddScore(int rate, int addScore)
-        {
-            SetScore(rate, GetScore(rate) + addScore);
-        }
+        //public void AddScore(int rate, int addScore)
+        //{
+        //    SetScore(rate, GetScore(rate) + addScore);
+        //}
 
         /*PROPERTYの値を取得*/
         public int GetNumOfProp(PROPERTY_TYPE property)
@@ -280,8 +326,7 @@ namespace FileSystem
         {
             SetNumOfProp(property, GetNumOfProp(property) + addNum);
         }
-
-
+        
         /*最後の接続時間を取得*/
         public System.DateTime GetPrevTime()
         {
@@ -342,40 +387,46 @@ namespace FileSystem
         public void SetCurrentTime()
         {
             System.DateTime CurDate = System.DateTime.Now;
+            SetTime(CurDate);
+        }
+        /*任意に時間設定*/
+        public void SetTime(System.DateTime date)
+        {
             string[] lines = System.IO.File.ReadAllLines(filename);
 
             for (int i = 0; i < lines.Length; ++i)
             {
                 if (lines[i] == '#' + TIME_TYPE.YY.ToString())
                 {
-                    lines[i + 1] = CurDate.Year.ToString();
+                    lines[i + 1] = date.Year.ToString();
                 }
                 else if (lines[i] == '#' + TIME_TYPE.MM.ToString())
                 {
-                    lines[i + 1] = CurDate.Month.ToString();
+                    lines[i + 1] = date.Month.ToString();
                 }
                 else if (lines[i] == '#' + TIME_TYPE.DD.ToString())
                 {
-                    lines[i + 1] = CurDate.Day.ToString();
+                    lines[i + 1] = date.Day.ToString();
                 }
                 else if (lines[i] == '#' + TIME_TYPE.hh.ToString())
                 {
-                    lines[i + 1] = CurDate.Hour.ToString();
+                    lines[i + 1] = date.Hour.ToString();
                 }
                 else if (lines[i] == '#' + TIME_TYPE.mm.ToString())
                 {
-                    lines[i + 1] = CurDate.Minute.ToString();
+                    lines[i + 1] = date.Minute.ToString();
                 }
                 else if (lines[i] == '#' + TIME_TYPE.ss.ToString())
                 {
-                    lines[i + 1] = CurDate.Second.ToString();
+                    lines[i + 1] = date.Second.ToString();
                 }
             }
 
             System.IO.File.WriteAllLines(filename, lines);
         }
+
         /*現在の時間と最後に接続した時間の間の差*/
-        public System.TimeSpan GetTimeGap()
+        System.TimeSpan GetTimeGap()
         {
             System.DateTime departure = GetPrevTime(); // 最後に接続した日
             System.DateTime arrival = System.DateTime.Now; // 現在
@@ -386,6 +437,36 @@ namespace FileSystem
         public int GetTimeGap_Days()
         {
             return GetTimeGap().Days;
+        }
+        /*接続時間などを基準に、ポイントをアップデートする。出力用の文字列を返す。*/
+        public string UpdatePoint_BasedTime()
+        {
+            /*ポイント計算式：
+            * 最後に接続してからの日数がMAX_DAYSより小さい場合は、その日数＋１が点数に加算される。
+            * 上の条件を満たさないなら１が点数に加算される。
+            */
+            const int MAX_DAYS = 5;
+
+            //出力用の文字列
+            string DisplayText = "最後の接続から" + GetTimeGap_Days() + "日目\n\n";
+            int addPoint = 1;
+
+            if(GetTimeGap_Days() < MAX_DAYS)
+            {
+                addPoint = MAX_DAYS - GetTimeGap_Days() + 1;
+                DisplayText += "POINT +" + addPoint;
+            }
+            else
+            {
+                DisplayText += "POINT +1";
+            }
+
+            //ファイルに格納
+            SetNumOfProp(PROPERTY_TYPE.POINT, GetNumOfProp(PROPERTY_TYPE.POINT) + addPoint);
+            DisplayText += "\n\n現在の点数：" + GetNumOfProp(PROPERTY_TYPE.POINT) + "点";
+
+            //出力用の文字列を返す
+            return DisplayText;
         }
 
         /*レートを取得*/
@@ -423,7 +504,6 @@ namespace FileSystem
             if (myRate > MAXLEVEL) myRate = MAXLEVEL;
             return myRate;
         }
-
         /*新ユーザー登録*/
         public bool AddUser()
         {
@@ -440,6 +520,7 @@ namespace FileSystem
                 {
                     sw.WriteLine('#' + (i+1).ToString()); // add rate line
                     sw.WriteLine(0); // add score line
+                    sw.WriteLine(0); //add boss score line
                 }
 
                 //属性追加

@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-
+using UnityEngine.SceneManagement;
 
 public class QuestionManagerObject : MonoBehaviour
 {
@@ -38,6 +38,8 @@ public class QuestionManagerObject : MonoBehaviour
     Animator WarningAnimator;
     [SerializeField]
     GameObject[] ObjectsForWarningAnimation = new GameObject[0];
+    [SerializeField]
+    Text DisplayInfomationText;
 
     Question.QuestionManager QuestionFuncs;
 
@@ -109,13 +111,15 @@ public class QuestionManagerObject : MonoBehaviour
         ////問題がまだ設定されていない状況なら処理終了
         //if (status == Question.SolveStatus.Solving)
         //    return;
-
-
+        
         /*不正解だったらダメージアニメ開始*/
         switch(status)
         {
             case Question.SolveStatus.Correct:
-                CurrentScoreText.text = "点数：" + CurrentlyUserInfo.score.ToString();
+                if(!CurrentlyUserInfo.bBoss)
+                    CurrentScoreText.text = "点数：" + CurrentlyUserInfo.score.ToString();
+                else
+                    CurrentScoreText.text = "点数：" + (CurrentlyUserInfo.bossScore + CurrentlyUserInfo.score).ToString();
                 break;
             case Question.SolveStatus.Incorrect:
                 if (!Panel.GetBool("Damaged")){
@@ -177,5 +181,32 @@ public class QuestionManagerObject : MonoBehaviour
                 o.SetActive(value);
             }
         }
+    }
+
+    //ボスステージ進入失敗
+    public void BossStartFailed()
+    {
+        //表示
+        DisplayInfomationText.text = "ゲームオーバー！";
+        //キャラクターがゆっくり止まる
+        status = Question.SolveStatus.Stoping;
+        //SE
+        SEManagerPrefab.Play(SEManager.SEs.InCorrect);
+    }
+
+    //ボスステージ進入失敗からシーン移動までの時間
+    float SceneTimer = 0.0f;
+    //マイフレーム呼出の必要がある
+    public void MoveToScoreSceneIn(float tick)
+    {
+        //一定時間後、シーンの変更
+        SceneTimer += Time.deltaTime;
+        if (SceneTimer >= tick)
+            SceneManager.LoadScene("ScoreScene");
+    }
+    //ボスオブジェクト
+    public Boss GetBoss()
+    {
+        return Boss.GetComponent<Boss>();
     }
 }

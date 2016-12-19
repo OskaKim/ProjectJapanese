@@ -25,4 +25,12 @@ public class Buttons : MonoBehaviour {
     {
         Application.Quit();
     }
+    public void SetDataToDefault_ExceptDate()
+    {
+        //ファイルから読み込み
+        FileSystem.SaveLoadManager loadMng = new FileSystem.SaveLoadManager();
+        loadMng.AddUser();
+        System.DateTime date = new System.DateTime(2016, 12, 10, 1, 1, 1);
+        loadMng.SetTime(date);
+    }
 }

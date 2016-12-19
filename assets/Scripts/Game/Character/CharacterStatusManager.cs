@@ -41,6 +41,9 @@ public class CharacterStatusManager : MonoBehaviour {
                 CharacterController.InCorrect();
                 Question_Mng.status = Question.SolveStatus.Waiting;
                 break;
+            case Question.SolveStatus.Stoping:
+                CharacterController.Stopping();
+                break;
         }
     }
 }

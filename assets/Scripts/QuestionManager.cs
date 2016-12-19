@@ -20,7 +20,7 @@ namespace Question
     }
 
     //問題解きの状態
-    public enum SolveStatus {Waiting, Solving, Correct, Incorrect };
+    public enum SolveStatus {Waiting, Solving, Correct, Incorrect, Stoping};
 
     //インスタンスを生成し、初期化してから使う
     public class QuestionManager : ScriptableObject
@@ -94,6 +94,9 @@ namespace Question
 
             //問題リストをシャッフル
             Inst.ShuffleQuestions();
+
+            //ボス戦突入前と初期化
+            CurrentlyUserInfo.bBoss = false;
         }
 
         /*旧 初期化*/
@@ -132,6 +135,17 @@ namespace Question
         //update
         public void UpdateQuestion(ref float timer, ref SolveStatus status)
         {
+
+            /*Stopping状態だったらアップデートしない
+            *状況１：ボス戦進入に失敗
+            */
+            if (ManagerObj.status == SolveStatus.Stoping)
+            {
+                //@param1秒ごにスコアシーンへ移動
+                ManagerObj.MoveToScoreSceneIn(5.0f);
+                return;
+            }
+
             if(GetAnswerDisplay() != null)
                AnswerText.text = GetAnswerDisplay();
 
@@ -184,6 +198,13 @@ namespace Question
                 timer = TICK_O;
                 status = SolveStatus.Correct;
                 SEManagerInst.Play(SEManager.SEs.Correct);
+
+                //ボスステージの例外
+                if (bBossStage)
+                {
+                    //ダメージエフェクト
+                    ManagerObj.GetBoss().Damaged();
+                }
             }
             else
             {
@@ -199,8 +220,13 @@ namespace Question
             }
 
             /*点数記録*/
-            if (isCorrect) ++CurrentlyUserInfo.score;
-
+            if (isCorrect)
+            {
+                if (!bBossStage)
+                    ++CurrentlyUserInfo.score;
+                else
+                    ++CurrentlyUserInfo.bossScore;
+            }
             /*現在の問題は終了*/
             bCheckAnswer = false;
             currentCorrect = null;
@@ -256,28 +282,40 @@ namespace Question
             if (questions.Count <= curQuesNum)
             {
                 /** ボスステージに入る前の条件
-                * 1 ボスステージ進入前
-                * 2 ステージのパース点数を超えた */
-                if (!bBossStage && passScoreToBoss <= CurrentlyUserInfo.score)
+                * ボスステージ進入前 */
+                if (!bBossStage)
                 {
-                    bBossStage = true;
-                    ManagerObj.GetBossTransform().gameObject.SetActive(true);
-                    curQuesNum = 0;
-                    /*ボスステージに問題再設定*/
-                    {
-                        FileSystem.QuestionFileManager FileMng = new FileSystem.QuestionFileManager(fileName + "Boss");
-                        //ファイルシステムから問題のリストを参照格納
-                        FileMng.SetQuestions(ref questions);
-                        //問題リストをシャッフル
-                        ShuffleQuestions();
-                    }
                     //クリア
                     ClearQuestion();
-                    //warning animation　始動
-                    ManagerObj.WarningAnimation = true;
+                    AnswerText.text = null;
+                    CorrectAnswerText.text = null;
+
+                    /*ステージのパース点数を超えた*/
+                    if (passScoreToBoss <= CurrentlyUserInfo.score)
+                    {
+                        bBossStage = true;
+                        CurrentlyUserInfo.bBoss = true;
+                        ManagerObj.GetBossTransform().gameObject.SetActive(true);
+                        curQuesNum = 0;
+                        /*ボスステージに問題再設定*/
+                        {
+                            FileSystem.QuestionFileManager FileMng = new FileSystem.QuestionFileManager(fileName + "Boss");
+                            //ファイルシステムから問題のリストを参照格納
+                            FileMng.SetQuestions(ref questions);
+                            //問題リストをシャッフル
+                            ShuffleQuestions();
+                        }
+                        //warning animation　始動
+                        ManagerObj.WarningAnimation = true;
+                    }
+                    /*ボスステージ進入失敗*/
+                    else
+                    {
+                        ManagerObj.BossStartFailed();
+                    }
                 }
                 //ボスステージクリア
-                else if(bBossStage)
+                else if (bBossStage)
                 {
                     SceneManager.LoadScene("ScoreScene");
                     //return;
@@ -346,7 +384,7 @@ namespace Question
 
             QuestionDefaultlySetting(ques);
 
-            Vector2 offset = new Vector2(10, Screen.height / 2 + 50);
+            Vector2 offset = new Vector2(10, Screen.height / 2);
 
             for (int i = 0; i < ques.ans.Count; ++i)
             {
@@ -381,7 +419,7 @@ namespace Question
 
             QuestionDefaultlySetting(ques);
 
-            Vector2 offset = new Vector2(50, Screen.height / 2 + 50);
+            Vector2 offset = new Vector2(50, Screen.height / 2);
 
             for (int i = 0; i < ques.ans.Count; ++i)
             {
